@@ -9,6 +9,8 @@ from ..utils.diff_utils import get_code_diffs
 from ..utils.llm_utils import generate_explanation
 from ..db.database import get_connection
 from ..utils.latex_utils import render_latex_document
+from ..utils.config_utils import load_config
+from ..db.database import get_codebase_summary
 
 # Configure logging
 logging.basicConfig(
@@ -110,8 +112,10 @@ class AdocEventHandler(FileSystemEventHandler):
             logging.error(f"Error handling change: {e}", exc_info=True)
 
 def render_latex_document_from_db(project_dir):
-    from db.database import get_connection
-    from utils.latex_utils import render_latex_document
+    from ..db.database import get_connection
+    from ..utils.latex_utils import render_latex_document
+    from ..utils.config_utils import load_config
+    from ..db.database import get_codebase_summary
 
     try:
         conn = get_connection()
@@ -140,8 +144,13 @@ def render_latex_document_from_db(project_dir):
             })
 
         # Render the LaTeX document
+        config = load_config()
+        author_name = config.get('AUTHOR_NAME', 'Default Author')
+        codebase_summary = get_codebase_summary()
+        latex_content = render_latex_document(changes_data, codebase_summary, author_name)
         output_path = os.path.join(project_dir, 'Adhoc_documentation.tex')
-        render_latex_document(changes_data, output_path)
+        with open(output_path, 'w') as f:
+            f.write(latex_content)
 
         logging.info(f'Documentation generated at {output_path}')
     except Exception as e:
